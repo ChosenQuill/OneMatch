@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { CommunityCard } from "@/components/dashboard/community-card"
 import { Hero } from "@/components/dashboard/hero"
@@ -10,10 +11,10 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
+import { MOCK_USER_ID } from "@/lib/constants"
+import { postJoinCommunity, postScheduleChat } from "@/lib/frontend-api"
 import type { CommunityMatch, NetworkGraph, UserMatch, UserProfile } from "@/lib/types"
 import { CalendarCheck, Flame, Handshake, LogIn, UsersRound } from "lucide-react"
-
-const MOCK_USER_ID = "a1b2c3d4"
 
 export function Dashboard() {
   const onboardingRef = useRef<HTMLDivElement | null>(null)
@@ -94,16 +95,8 @@ export function Dashboard() {
 
   async function handleScheduleChat(userId: string) {
     try {
-      const response = await fetch("/api/actions/schedule-chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ inviteeUserId: userId }),
-      })
-      const json = await response.json()
-      if (!response.ok) {
-        throw new Error(json?.message ?? "Unable to schedule chat")
-      }
-      setActionMessage(json?.data?.message ?? "Coffee chat requested!")
+      const message = await postScheduleChat(userId)
+      setActionMessage(message)
     } catch (error) {
       console.error("Failed to schedule chat", error)
       setActionMessage("Something went wrong. Try again soon.")
@@ -112,16 +105,8 @@ export function Dashboard() {
 
   async function handleJoinCommunity(communityId: string) {
     try {
-      const response = await fetch("/api/actions/join-community", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ communityId }),
-      })
-      const json = await response.json()
-      if (!response.ok) {
-        throw new Error(json?.message ?? "Unable to join community")
-      }
-      setActionMessage(json?.data?.message ?? "Joined community!")
+      const { message } = await postJoinCommunity(communityId)
+      setActionMessage(message)
     } catch (error) {
       console.error("Failed to join community", error)
       setActionMessage("Unable to join right now. Please retry.")
@@ -166,9 +151,14 @@ export function Dashboard() {
               People who share your interests, location, and org context.
             </p>
           </div>
-          <Button variant="outline" className="w-full md:w-auto" onClick={() => scrollToOnboarding()}>
-            <LogIn className="mr-2 h-4 w-4" /> Refresh matches
-          </Button>
+          <div className="flex flex-col gap-3 md:flex-row">
+            <Button variant="outline" className="w-full md:w-auto" onClick={() => scrollToOnboarding()}>
+              <LogIn className="mr-2 h-4 w-4" /> Refresh matches
+            </Button>
+            <Button asChild className="w-full md:w-auto" variant="secondary">
+              <Link href="/matches">View all</Link>
+            </Button>
+          </div>
         </div>
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {userMatches.map((match) => (
@@ -178,11 +168,14 @@ export function Dashboard() {
       </section>
 
       <section className="space-y-6">
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <h2 className="text-2xl font-semibold">Communities to explore</h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground md:max-w-lg">
             Join Slack spaces tailored to your shared interests.
           </p>
+          <Button asChild variant="outline" className="w-full md:w-auto">
+            <Link href="/communities">Open community hub</Link>
+          </Button>
         </div>
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {communityMatches.map((match) => (
@@ -221,6 +214,9 @@ export function Dashboard() {
               <p className="mt-2 text-sm leading-6 text-foreground/80">
                 {profile?.bio ?? "Share a short bio to help teammates spark a conversation."}
               </p>
+              <Button asChild size="sm" variant="secondary" className="mt-4 w-full">
+                <Link href="/network">View full network</Link>
+              </Button>
             </div>
           </CardContent>
         </Card>

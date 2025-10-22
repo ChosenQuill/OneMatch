@@ -2,14 +2,15 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import type { CommunityMatch } from "@/lib/types"
-import { Users } from "lucide-react"
+import { Loader2, Users } from "lucide-react"
 
 interface CommunityCardProps {
   match: CommunityMatch
   onJoin?: (communityId: string) => void
+  isProcessing?: boolean
 }
 
-export function CommunityCard({ match, onJoin }: CommunityCardProps) {
+export function CommunityCard({ match, onJoin, isProcessing }: CommunityCardProps) {
   return (
     <Card className="h-full border-border/70 bg-card/80 backdrop-blur">
       <CardHeader className="space-y-4">
@@ -34,8 +35,21 @@ export function CommunityCard({ match, onJoin }: CommunityCardProps) {
         </div>
       </CardContent>
       <CardFooter>
-        <Button className="w-full" variant="secondary" onClick={() => onJoin?.(match.community.communityId)}>
-          <Users className="mr-2 h-4 w-4" /> Join community
+        <Button
+          className="w-full"
+          variant="secondary"
+          disabled={isProcessing}
+          onClick={() => onJoin?.(match.community.communityId)}
+        >
+          {isProcessing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...
+            </>
+          ) : (
+            <>
+              <Users className="mr-2 h-4 w-4" /> Join community
+            </>
+          )}
         </Button>
       </CardFooter>
     </Card>

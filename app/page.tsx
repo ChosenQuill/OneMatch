@@ -2,7 +2,7 @@ import { Dashboard } from "@/components/dashboard/dashboard"
 
 export default function Home() {
   return (
-    <main className="mx-auto max-w-6xl space-y-16 px-4 pb-20 pt-12 sm:px-6 lg:px-8">
+    <div className="space-y-16">
       <header className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm font-semibold uppercase tracking-widest text-primary">OneMatch</p>
@@ -19,6 +19,6 @@ export default function Home() {
         </div>
       </header>
       <Dashboard />
-    </main>
+    </div>
   )
 }

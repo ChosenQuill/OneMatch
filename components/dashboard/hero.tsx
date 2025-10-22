@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Sparkles } from "lucide-react"
@@ -27,8 +28,8 @@ export function Hero({ onScrollToOnboarding }: HeroProps) {
             Complete onboarding
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
-          <Button size="lg" variant="ghost" className="text-primary-foreground/90 hover:bg-white/20">
-            View hackathon pitch
+          <Button asChild size="lg" variant="ghost" className="text-primary-foreground/90 hover:bg-white/20">
+            <Link href="/matches">Explore matches</Link>
           </Button>
         </div>
       </div>
