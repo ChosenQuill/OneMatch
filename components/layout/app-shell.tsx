@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { LogoutButton } from "@/components/auth/logout-button"
 import { Avatar } from "@/components/ui/avatar"
 import type { UserProfile } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -89,6 +90,7 @@ export function AppShell({ children, profile }: AppShellProps) {
               fallback={getInitials(profile?.fullName)}
               className="h-11 w-11"
             />
+            <LogoutButton />
           </div>
         </div>
         <div className="border-t border-border/60 bg-background/80 backdrop-blur md:hidden">
@@ -112,6 +114,9 @@ export function AppShell({ children, profile }: AppShellProps) {
               )
             })}
           </nav>
+          <div className="px-4 pb-4">
+            <LogoutButton />
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 pb-20 pt-12 sm:px-6 lg:px-8">{children}</main>

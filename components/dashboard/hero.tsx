@@ -5,9 +5,19 @@ import { ArrowRight, Sparkles } from "lucide-react"
 
 interface HeroProps {
   onPrimaryAction?: () => void
+  primaryLabel?: string
+  primaryHref?: string
+  secondaryLabel?: string
+  secondaryHref?: string
 }
 
-export function Hero({ onPrimaryAction }: HeroProps) {
+export function Hero({
+  onPrimaryAction,
+  primaryLabel = "Get started",
+  primaryHref,
+  secondaryLabel = "Explore matches",
+  secondaryHref = "/matches",
+}: HeroProps) {
   return (
     <section className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary/95 via-primary to-primary/80 px-8 py-16 text-primary-foreground shadow-xl">
       <div className="absolute -top-24 right-16 h-64 w-64 rounded-full bg-white/10 blur-3xl" aria-hidden />
@@ -24,13 +34,24 @@ export function Hero({ onPrimaryAction }: HeroProps) {
           Discover curated communities, request coffee chats, and grow your Capital One network.
         </p>
         <div className="flex flex-wrap items-center gap-4">
-          <Button size="lg" className="bg-white text-primary hover:bg-white/90" onClick={onPrimaryAction}>
-            Update profile
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-          <Button asChild size="lg" variant="ghost" className="text-primary-foreground/90 hover:bg-white/20">
-            <Link href="/matches">Explore matches</Link>
-          </Button>
+          {primaryHref ? (
+            <Button asChild size="lg" className="bg-white text-primary hover:bg-white/90">
+              <Link href={primaryHref}>
+                {primaryLabel}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          ) : (
+            <Button size="lg" className="bg-white text-primary hover:bg-white/90" onClick={onPrimaryAction}>
+              {primaryLabel}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          )}
+          {secondaryHref && (
+            <Button asChild size="lg" variant="ghost" className="text-primary-foreground/90 hover:bg-white/20">
+              <Link href={secondaryHref}>{secondaryLabel}</Link>
+            </Button>
+          )}
         </div>
       </div>
     </section>

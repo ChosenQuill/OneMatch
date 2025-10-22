@@ -3,18 +3,18 @@
 import Link from "next/link"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { CommunityCard } from "@/components/dashboard/community-card"
-import { Hero } from "@/components/dashboard/hero"
-import { MatchCard } from "@/components/dashboard/match-card"
-import { NetworkPreview } from "@/components/dashboard/network-preview"
+import { Avatar } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
+import { NetworkPreview } from "@/components/dashboard/network-preview"
 import { MOCK_USER_ID } from "@/lib/constants"
 import { postJoinCommunity, postScheduleChat } from "@/lib/frontend-api"
 import type { CommunityMatch, NetworkGraph, UserMatch, UserProfile } from "@/lib/types"
-import { CalendarCheck, Flame, Handshake, Loader2, RefreshCcw, Sparkles, UsersRound } from "lucide-react"
+import { CheckCircle2, Flame, Handshake, Loader2, RefreshCcw, Share2, UsersRound } from "lucide-react"
+
+const REQUIRED_FIELDS: Array<keyof UserProfile> = ["fullName", "location", "org", "workspace"]
 
 export function Dashboard() {
   const router = useRouter()
@@ -24,6 +24,7 @@ export function Dashboard() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [actionMessage, setActionMessage] = useState<string | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [pendingActionId, setPendingActionId] = useState<string | null>(null)
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -65,64 +66,125 @@ export function Dashboard() {
     const sharedInterests = new Set<string>()
     userMatches.forEach((match) => match.commonInterests.forEach((interest) => sharedInterests.add(interest)))
 
+    const activeInterests = profile?.interests?.length ?? 0
+    const networkNodes = network?.nodes.length ?? 0
+    const networkLinks = network?.links.length ?? 0
+
     return [
       {
         icon: Handshake,
         label: "People matches",
         value: userMatches.length,
-        caption: "Top potential coffee chats",
+        caption: "Ready for intros",
+        href: "/matches",
       },
       {
         icon: UsersRound,
         label: "Communities",
         value: communityMatches.length,
-        caption: "Tailored to your interests",
+        caption: "Spaces to join",
+        href: "/communities",
       },
       {
         icon: Flame,
-        label: "Shared interests",
-        value: sharedInterests.size,
-        caption: "Conversation starters",
+        label: "Active interests",
+        value: Math.max(activeInterests, sharedInterests.size),
+        caption: "Fueling your matches",
+        href: "/profile",
       },
       {
-        icon: CalendarCheck,
-        label: "Next steps",
-        value: 2,
-        caption: "Schedule chats & join Slack",
+        icon: Share2,
+        label: "Network reach",
+        value: networkNodes,
+        caption: `${networkLinks} connections mapped`,
+        href: "/network",
       },
     ]
-  }, [communityMatches, userMatches])
+  }, [communityMatches, network, profile?.interests, userMatches])
+
+  const topMatch = userMatches[0] ?? null
+  const topCommunity = communityMatches[0] ?? null
+
+  const profileReadiness = useMemo(() => {
+    if (!profile) {
+      return { complete: false, missing: ["Profile details", "Interests"] }
+    }
+
+    const missingBasics = REQUIRED_FIELDS.filter((field) => {
+      const value = profile[field]
+      return typeof value !== "string" || value.trim().length === 0
+    })
+    const hasInterests = Array.isArray(profile.interests) && profile.interests.length > 0
+
+    const missing: string[] = []
+    if (missingBasics.length > 0) missing.push("Complete your basics")
+    if (!hasInterests) missing.push("Add interests")
+
+    return {
+      complete: missing.length === 0,
+      missing,
+    }
+  }, [profile])
 
   async function handleScheduleChat(userId: string) {
     try {
+      setPendingActionId(userId)
       const message = await postScheduleChat(userId)
       setActionMessage(message)
     } catch (error) {
       console.error("Failed to schedule chat", error)
       setActionMessage("Something went wrong. Try again soon.")
+    } finally {
+      setPendingActionId(null)
     }
   }
 
   async function handleJoinCommunity(communityId: string) {
     try {
+      setPendingActionId(communityId)
       const { message } = await postJoinCommunity(communityId)
       setActionMessage(message)
     } catch (error) {
       console.error("Failed to join community", error)
       setActionMessage("Unable to join right now. Please retry.")
+    } finally {
+      setPendingActionId(null)
     }
   }
 
   return (
-    <div className="space-y-14">
-      <Hero onPrimaryAction={() => router.push("/profile")} />
+    <div className="space-y-10">
+      <section className="rounded-3xl border border-border/70 bg-gradient-to-br from-primary/95 via-primary to-primary/80 p-8 text-primary-foreground shadow-xl">
+        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-4">
+            <Badge className="bg-white/20 text-white">Dashboard</Badge>
+            <div className="space-y-3">
+              <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                Welcome back, {profile?.fullName?.split(" ")?.[0] ?? "there"}.
+              </h1>
+              <p className="max-w-xl text-base text-primary-foreground/90">
+                Keep the momentum going with a quick check-in on your matches, communities, and network prompts. Everything else lives in the tabs when you&apos;re ready to dive deeper.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button
+              variant="secondary"
+              className="bg-white text-primary hover:bg-white/90"
+              onClick={() => router.push("/matches")}
+            >
+              Review matches
+            </Button>
+            <Button variant="ghost" className="text-primary-foreground/90 hover:bg-white/20" onClick={() => router.push("/profile")}>
+              Update profile
+            </Button>
+          </div>
+        </div>
+      </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {summaryMetrics.map((metric) => (
-          <Card
-            key={metric.label}
-            className="border border-border/70 bg-card/80 p-6 backdrop-blur transition hover:border-primary/40"
-          >
+          <Card key={metric.label} className="border border-border/70 bg-card/80 p-6 backdrop-blur transition hover:border-primary/40">
             <div className="flex items-center justify-between">
               <metric.icon className="h-6 w-6 text-primary" />
               <Badge variant="secondary" className="rounded-full bg-muted/60 text-xs uppercase tracking-wider">
@@ -130,62 +192,185 @@ export function Dashboard() {
               </Badge>
             </div>
             <div className="mt-6 text-3xl font-semibold">{metric.value}</div>
-            <p className="mt-1 text-sm text-muted-foreground">{metric.label}</p>
+            <div className="mt-1 flex items-center justify-between text-sm text-muted-foreground">
+              <span>{metric.label}</span>
+              <Link href={metric.href} className="font-medium text-primary hover:underline">
+                View
+              </Link>
+            </div>
           </Card>
         ))}
       </section>
 
-      <section className="grid gap-5 lg:grid-cols-[minmax(0,_1.15fr)_minmax(0,_0.85fr)]">
+      <section className="grid gap-5 lg:grid-cols-3">
         <Card className="border-border/70 bg-card/80 backdrop-blur">
-          <CardContent className="space-y-5 p-6">
-            <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-primary">
-              <Sparkles className="h-4 w-4" /> Next best actions
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-xl font-semibold text-foreground">Keep the momentum going</h3>
-              <p className="text-sm text-muted-foreground">
-                Line up your next conversation and explore a community to stay connected after onboarding week.
-              </p>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Button className="flex-1" onClick={() => router.push("/matches")}>
-                Open matches
-              </Button>
-              <Button variant="outline" className="flex-1" onClick={() => router.push("/communities")}>
-                Explore communities
-              </Button>
-            </div>
+          <CardHeader>
+            <Badge variant="outline" className="w-fit rounded-full border-primary/40 bg-primary/10 text-primary">
+              Connection highlight
+            </Badge>
+            <CardTitle className="text-xl">
+              {topMatch ? `Say hi to ${topMatch.user.fullName}` : "Matches unlock after onboarding"}
+            </CardTitle>
+            <CardDescription>
+              {topMatch
+                ? "Break the ice with a quick note about your shared interests."
+                : "Complete your profile to receive curated introductions."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {topMatch ? (
+              <>
+                <div className="flex items-center gap-3">
+                  <Avatar
+                    src={topMatch.user.profilePhotoUrl ?? undefined}
+                    fallback={topMatch.user.fullName
+                      .split(" ")
+                      .map((part) => part[0])
+                      .join("")
+                      .slice(0, 2)
+                      .toUpperCase()}
+                    className="h-12 w-12"
+                  />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-foreground">{topMatch.user.role}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {topMatch.user.org} · {topMatch.user.location}
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-2 rounded-2xl border border-border/60 bg-muted/40 p-4 text-sm text-muted-foreground">
+                  <p className="font-semibold text-foreground">Prompt</p>
+                  <p>{topMatch.context}</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {topMatch.commonInterests.map((interest) => (
+                    <Badge key={interest} variant="secondary" className="rounded-full px-3 py-1">
+                      {interest}
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button
+                    className="flex-1"
+                    onClick={() => topMatch && handleScheduleChat(topMatch.user.userId)}
+                    disabled={pendingActionId === topMatch.user.userId}
+                  >
+                    {pendingActionId === topMatch.user.userId ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Scheduling…
+                      </>
+                    ) : (
+                      <>Suggest coffee chat</>
+                    )}
+                  </Button>
+                  <Button asChild variant="ghost" className="flex-1">
+                    <Link href="/matches">Open matches</Link>
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-border/60 bg-muted/30 p-6 text-sm text-muted-foreground">
+                Add interests and location to unlock your first curated introduction.
+              </div>
+            )}
           </CardContent>
         </Card>
+
         <Card className="border-border/70 bg-card/80 backdrop-blur">
-          <CardContent className="space-y-5 p-6">
-            <Badge variant="secondary" className="rounded-full bg-muted/60 text-xs uppercase tracking-widest">
-              Profile snapshot
+          <CardHeader>
+            <Badge variant="outline" className="w-fit rounded-full border-primary/40 bg-primary/10 text-primary">
+              Community spotlight
             </Badge>
-            <div className="space-y-2">
-              <h3 className="text-xl font-semibold text-foreground">
-                {profile?.fullName ?? "Complete your profile details"}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {[profile?.location, profile?.org, profile?.workspace].filter(Boolean).join(" · ") ||
-                  "Add your location and workspace to unlock hyper-relevant matches."}
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {profile?.interests?.length ? (
-                profile.interests.map((interest) => (
-                  <Badge key={interest.id} variant="secondary" className="rounded-full px-3 py-1">
-                    {interest.name}
-                  </Badge>
-                ))
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  Add interests during onboarding to unlock curated introductions.
-                </p>
+            <CardTitle className="text-xl">
+              {topCommunity ? topCommunity.community.name : "Communities waiting"}
+            </CardTitle>
+            <CardDescription>
+              {topCommunity
+                ? topCommunity.community.description
+                : "Fill out your interests to get placed into curated spaces."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {topCommunity ? (
+              <>
+                <div className="flex flex-wrap gap-2">
+                  {topCommunity.matchingInterests.map((interest) => (
+                    <Badge key={interest} variant="secondary" className="rounded-full px-3 py-1">
+                      {interest}
+                    </Badge>
+                  ))}
+                </div>
+                <div className="rounded-2xl border border-dashed border-border/60 bg-muted/30 p-4 text-sm text-muted-foreground">
+                  Slack: {topCommunity.community.slackChannel}
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button
+                    className="flex-1"
+                    onClick={() => handleJoinCommunity(topCommunity.community.communityId)}
+                    disabled={pendingActionId === topCommunity.community.communityId}
+                    variant="secondary"
+                  >
+                    {pendingActionId === topCommunity.community.communityId ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Joining…
+                      </>
+                    ) : (
+                      <>Join community</>
+                    )}
+                  </Button>
+                  <Button asChild variant="ghost" className="flex-1">
+                    <Link href="/communities">Explore all</Link>
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-border/60 bg-muted/30 p-6 text-sm text-muted-foreground">
+                Tell us what you&apos;re into and we&apos;ll line up communities ready to welcome you.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/70 bg-card/80 backdrop-blur">
+          <CardHeader>
+            <Badge variant="outline" className="w-fit rounded-full border-primary/40 bg-primary/10 text-primary">
+              Profile health
+            </Badge>
+            <CardTitle className="text-xl">Make your matches sharper</CardTitle>
+            <CardDescription>
+              Keep these details current so the matching engine knows who to introduce next.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-3">
+              <div className="flex items-start gap-3 text-sm">
+                <CheckCircle2 className={`h-4 w-4 ${profileReadiness.complete ? "text-emerald-500" : "text-muted-foreground"}`} />
+                <div className="space-y-1">
+                  <p className="font-medium text-foreground">Basics complete</p>
+                  <p className="text-muted-foreground">
+                    {profileReadiness.complete
+                      ? "Your profile is ready for new matches."
+                      : "A few basics are missing—update them to unlock better intros."}
+                  </p>
+                </div>
+              </div>
+              {!profileReadiness.complete && (
+                <ul className="ml-7 list-disc text-xs text-muted-foreground">
+                  {profileReadiness.missing.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
               )}
             </div>
-            <Button variant="outline" onClick={() => router.push("/profile")}>
-              Update profile
+            <Separator />
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground">Last updated</p>
+              <p>
+                {profile ? "Moments ago" : "Not yet saved. Complete your onboarding to personalize the dashboard."}
+              </p>
+            </div>
+            <Button onClick={() => router.push("/profile")} variant="outline">
+              Refresh profile
             </Button>
           </CardContent>
         </Card>
@@ -194,10 +379,8 @@ export function Dashboard() {
       <section className="space-y-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-2xl font-semibold">Your top matches</h2>
-            <p className="text-sm text-muted-foreground">
-              People who share your interests, location, and org context.
-            </p>
+            <h2 className="text-2xl font-semibold">Stay up to date</h2>
+            <p className="text-sm text-muted-foreground">Refresh data anytime to pull in the latest matches and communities.</p>
           </div>
           <div className="flex flex-col gap-3 md:flex-row">
             <Button
@@ -217,62 +400,63 @@ export function Dashboard() {
               )}
             </Button>
             <Button asChild className="w-full md:w-auto" variant="secondary">
-              <Link href="/matches">View all</Link>
+              <Link href="/matches">Open matches</Link>
             </Button>
           </div>
-        </div>
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {userMatches.map((match) => (
-            <MatchCard key={match.user.userId} match={match} onScheduleChat={handleScheduleChat} />
-          ))}
-        </div>
-      </section>
-
-      <section className="space-y-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <h2 className="text-2xl font-semibold">Communities to explore</h2>
-          <p className="text-sm text-muted-foreground md:max-w-lg">
-            Join Slack spaces tailored to your shared interests.
-          </p>
-          <Button asChild variant="outline" className="w-full md:w-auto">
-            <Link href="/communities">Open community hub</Link>
-          </Button>
-        </div>
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {communityMatches.map((match) => (
-            <CommunityCard key={match.community.communityId} match={match} onJoin={handleJoinCommunity} />
-          ))}
         </div>
       </section>
 
       <section className="grid gap-5 lg:grid-cols-[minmax(0,_1.1fr)_minmax(0,_0.9fr)]">
         <NetworkPreview graph={network} />
         <Card className="border-border/70 bg-card/80 backdrop-blur">
-          <CardContent className="space-y-6 p-6">
-            <div>
-              <h3 className="text-xl font-semibold">Make the first move</h3>
-              <p className="text-sm text-muted-foreground">
-                Keep momentum going after onboarding with quick prompts tailored to your matches.
-              </p>
-            </div>
-            <div className="space-y-4">
+          <CardHeader>
+            <Badge variant="outline" className="w-fit rounded-full border-primary/40 bg-primary/10 text-primary">
+              Quick wins
+            </Badge>
+            <CardTitle className="text-xl">What to tackle this week</CardTitle>
+            <CardDescription>
+              These small actions keep the connections you&apos;ve unlocked feeling fresh.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-3 text-sm">
               <div className="rounded-2xl border border-border/60 bg-muted/40 p-4">
-                <p className="text-sm font-semibold text-foreground">Coffee chat idea</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Ask Matthew about his recent work on the Data Discovery guild and how it can help your org.
+                <p className="font-semibold text-foreground">Follow up on your latest match</p>
+                <p className="mt-1 text-muted-foreground">
+                  Drop a quick ping referencing {topMatch ? topMatch.commonInterests[0] : "a shared interest"} and propose two times for a chat.
                 </p>
               </div>
               <div className="rounded-2xl border border-border/60 bg-muted/40 p-4">
-                <p className="text-sm font-semibold text-foreground">Community spotlight</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Wellness Warriors is hosting a pickleball mixer next Thursday—perfect for casual intros.
+                <p className="font-semibold text-foreground">Share a community update</p>
+                <p className="mt-1 text-muted-foreground">
+                  Post a welcome message in {topCommunity ? topCommunity.community.slackChannel : "your newest channel"}.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border/60 bg-muted/40 p-4">
+                <p className="font-semibold text-foreground">Refresh your story</p>
+                <p className="mt-1 text-muted-foreground">
+                  Update your goals so OneMatch suggests connections that align with what&apos;s next.
                 </p>
               </div>
             </div>
             <Separator />
-            <Button asChild size="sm" variant="secondary" className="w-full">
-              <Link href="/network">View full network</Link>
-            </Button>
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Shortcuts</p>
+              <div className="flex flex-wrap gap-2">
+                <Button asChild size="sm" variant="secondary">
+                  <Link href="/matches">Matches</Link>
+                </Button>
+                <Button asChild size="sm" variant="secondary">
+                  <Link href="/communities">Communities</Link>
+                </Button>
+                <Button asChild size="sm" variant="secondary">
+                  <Link href="/network">Network</Link>
+                </Button>
+                <Button asChild size="sm" variant="secondary">
+                  <Link href="/profile">Profile</Link>
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </section>
