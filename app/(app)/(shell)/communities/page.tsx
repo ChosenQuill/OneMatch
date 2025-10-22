@@ -1,21 +1,36 @@
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import { CommunityGrid } from "@/components/communities/community-grid"
 import { PageHeader } from "@/components/layout/page-header"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import type { CommunityMatch } from "@/lib/types"
+import { fetchFromApi, isOnboardingCompleteFromCookies } from "@/lib/server-api"
+import { isProfileComplete } from "@/lib/profile"
+import type { CommunityMatch, UserProfile } from "@/lib/types"
+
+export const dynamic = "force-dynamic"
+
+async function getProfile(): Promise<UserProfile | null> {
+  try {
+    const response = await fetchFromApi("/api/users/me/profile")
+    if (!response.ok) {
+      return null
+    }
+    const json = await response.json()
+    return (json?.data as UserProfile) ?? null
+  } catch (error) {
+    console.error("Failed to load profile for communities page", error)
+    return null
+  }
+}
 
 async function getCommunityMatches(): Promise<CommunityMatch[]> {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL ?? ""}/api/matches/communities`, {
-      cache: "no-store",
-    })
-
+    const response = await fetchFromApi("/api/matches/communities")
     if (!response.ok) {
       return []
     }
-
     const json = await response.json()
     return (json?.data as CommunityMatch[]) ?? []
   } catch (error) {
@@ -25,6 +40,12 @@ async function getCommunityMatches(): Promise<CommunityMatch[]> {
 }
 
 export default async function CommunitiesPage() {
+  const profile = await getProfile()
+
+  if (!(await isOnboardingCompleteFromCookies()) || !profile || !isProfileComplete(profile)) {
+    redirect("/onboarding")
+  }
+
   const matches = await getCommunityMatches()
 
   return (

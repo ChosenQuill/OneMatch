@@ -1,1 +1,1 @@
-export const MOCK_USER_ID = "a1b2c3d4"
+export const MOCK_USER_ID = "ENA487"

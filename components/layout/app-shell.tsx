@@ -18,8 +18,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: "/", label: "Overview", match: (pathname) => pathname === "/" },
-  { href: "/profile", label: "Profile" },
+  { href: "/dashboard", label: "Dashboard", match: (pathname) => pathname === "/dashboard" },
   { href: "/matches", label: "Matches", match: (pathname) => pathname.startsWith("/matches") },
   {
     href: "/communities",
@@ -27,10 +26,11 @@ const navItems: NavItem[] = [
     match: (pathname) => pathname.startsWith("/communities"),
   },
   { href: "/network", label: "Network" },
+  { href: "/profile", label: "Profile" },
 ]
 
 function getInitials(name?: string | null) {
-  if (!name) return "JD"
+  if (!name) return "OM"
   return name
     .split(" ")
     .map((part) => part[0])
@@ -46,7 +46,7 @@ export function AppShell({ children, profile }: AppShellProps) {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <header className="border-b border-border/60 bg-background/70 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-          <Link href="/" className="flex items-center gap-3">
+          <Link href="/dashboard" className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
               OM
             </div>
@@ -77,9 +77,11 @@ export function AppShell({ children, profile }: AppShellProps) {
           </nav>
           <div className="flex items-center gap-3">
             <div className="hidden text-right sm:block">
-              <p className="text-sm font-medium text-foreground">{profile?.fullName ?? "Jordan Doe"}</p>
+              <p className="text-sm font-medium text-foreground">
+                {profile?.fullName?.trim() || "Complete your profile"}
+              </p>
               <p className="text-xs text-muted-foreground">
-                {[profile?.org, profile?.location].filter(Boolean).join(" · ") || "Card Tech"}
+                {[profile?.org, profile?.location].filter(Boolean).join(" · ") || "Finish onboarding to personalize"}
               </p>
             </div>
             <Avatar

@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button"
 import { ArrowRight, Sparkles } from "lucide-react"
 
 interface HeroProps {
-  onScrollToOnboarding?: () => void
+  onPrimaryAction?: () => void
 }
 
-export function Hero({ onScrollToOnboarding }: HeroProps) {
+export function Hero({ onPrimaryAction }: HeroProps) {
   return (
     <section className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary/95 via-primary to-primary/80 px-8 py-16 text-primary-foreground shadow-xl">
       <div className="absolute -top-24 right-16 h-64 w-64 rounded-full bg-white/10 blur-3xl" aria-hidden />
@@ -24,8 +24,8 @@ export function Hero({ onScrollToOnboarding }: HeroProps) {
           Discover curated communities, request coffee chats, and grow your Capital One network.
         </p>
         <div className="flex flex-wrap items-center gap-4">
-          <Button size="lg" className="bg-white text-primary hover:bg-white/90" onClick={onScrollToOnboarding}>
-            Complete onboarding
+          <Button size="lg" className="bg-white text-primary hover:bg-white/90" onClick={onPrimaryAction}>
+            Update profile
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
           <Button asChild size="lg" variant="ghost" className="text-primary-foreground/90 hover:bg-white/20">

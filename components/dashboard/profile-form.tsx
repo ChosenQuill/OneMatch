@@ -171,7 +171,7 @@ export function ProfileForm({ onSaved }: ProfileFormProps) {
               <Label htmlFor="fullName">Full name</Label>
               <Input
                 id="fullName"
-                placeholder="Jordan Doe"
+                placeholder="Rithvik Senthilkumar"
                 value={formState.fullName}
                 onChange={(event) => handleInputChange("fullName", event.target.value)}
               />
@@ -189,7 +189,7 @@ export function ProfileForm({ onSaved }: ProfileFormProps) {
               <Label htmlFor="location">Location</Label>
               <Input
                 id="location"
-                placeholder="McLean, VA"
+                placeholder="Plano, TX"
                 value={formState.location}
                 onChange={(event) => handleInputChange("location", event.target.value)}
               />
@@ -198,7 +198,7 @@ export function ProfileForm({ onSaved }: ProfileFormProps) {
               <Label htmlFor="org">Org</Label>
               <Input
                 id="org"
-                placeholder="Card Tech"
+                placeholder="Cloud Platform"
                 value={formState.org}
                 onChange={(event) => handleInputChange("org", event.target.value)}
               />
@@ -207,7 +207,7 @@ export function ProfileForm({ onSaved }: ProfileFormProps) {
               <Label htmlFor="workspace">Workspace</Label>
               <Input
                 id="workspace"
-                placeholder="HQ1"
+                placeholder="Plano Campus"
                 value={formState.workspace}
                 onChange={(event) => handleInputChange("workspace", event.target.value)}
               />
@@ -216,7 +216,7 @@ export function ProfileForm({ onSaved }: ProfileFormProps) {
               <Label htmlFor="goals">Connection goals</Label>
               <Input
                 id="goals"
-                placeholder="Find hackathon teammates"
+                placeholder="Launch cross-site coffee chats"
                 value={formState.goals}
                 onChange={(event) => handleInputChange("goals", event.target.value)}
               />

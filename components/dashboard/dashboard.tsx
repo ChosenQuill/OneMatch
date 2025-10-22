@@ -1,12 +1,12 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import { CommunityCard } from "@/components/dashboard/community-card"
 import { Hero } from "@/components/dashboard/hero"
 import { MatchCard } from "@/components/dashboard/match-card"
 import { NetworkPreview } from "@/components/dashboard/network-preview"
-import { ProfileForm } from "@/components/dashboard/profile-form"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -14,42 +14,46 @@ import { Separator } from "@/components/ui/separator"
 import { MOCK_USER_ID } from "@/lib/constants"
 import { postJoinCommunity, postScheduleChat } from "@/lib/frontend-api"
 import type { CommunityMatch, NetworkGraph, UserMatch, UserProfile } from "@/lib/types"
-import { CalendarCheck, Flame, Handshake, LogIn, UsersRound } from "lucide-react"
+import { CalendarCheck, Flame, Handshake, Loader2, RefreshCcw, Sparkles, UsersRound } from "lucide-react"
 
 export function Dashboard() {
-  const onboardingRef = useRef<HTMLDivElement | null>(null)
+  const router = useRouter()
   const [userMatches, setUserMatches] = useState<UserMatch[]>([])
   const [communityMatches, setCommunityMatches] = useState<CommunityMatch[]>([])
   const [network, setNetwork] = useState<NetworkGraph | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [actionMessage, setActionMessage] = useState<string | null>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      setIsRefreshing(true)
+      const [userMatchesRes, communityMatchesRes, networkRes, profileRes] = await Promise.all([
+        fetch("/api/matches/users", { cache: "no-store" }),
+        fetch("/api/matches/communities", { cache: "no-store" }),
+        fetch(`/api/network/${MOCK_USER_ID}`, { cache: "no-store" }),
+        fetch("/api/users/me/profile", { cache: "no-store" }),
+      ])
+
+      const userMatchesJson = await userMatchesRes.json()
+      const communityMatchesJson = await communityMatchesRes.json()
+      const networkJson = await networkRes.json()
+      const profileJson = await profileRes.json()
+
+      setUserMatches(userMatchesJson?.data ?? [])
+      setCommunityMatches(communityMatchesJson?.data ?? [])
+      setNetwork(networkJson?.data ?? null)
+      setProfile(profileJson?.data ?? null)
+    } catch (error) {
+      console.error("Failed to load dashboard data", error)
+    } finally {
+      setIsRefreshing(false)
+    }
+  }, [])
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        const [userMatchesRes, communityMatchesRes, networkRes, profileRes] = await Promise.all([
-          fetch("/api/matches/users", { cache: "no-store" }),
-          fetch("/api/matches/communities", { cache: "no-store" }),
-          fetch(`/api/network/${MOCK_USER_ID}`, { cache: "no-store" }),
-          fetch("/api/users/me/profile", { cache: "no-store" }),
-        ])
-
-        const userMatchesJson = await userMatchesRes.json()
-        const communityMatchesJson = await communityMatchesRes.json()
-        const networkJson = await networkRes.json()
-        const profileJson = await profileRes.json()
-
-        setUserMatches(userMatchesJson?.data ?? [])
-        setCommunityMatches(communityMatchesJson?.data ?? [])
-        setNetwork(networkJson?.data ?? null)
-        setProfile(profileJson?.data ?? null)
-      } catch (error) {
-        console.error("Failed to bootstrap dashboard", error)
-      }
-    }
-
-    fetchData()
-  }, [])
+    fetchDashboardData()
+  }, [fetchDashboardData])
 
   useEffect(() => {
     if (!actionMessage) return
@@ -89,10 +93,6 @@ export function Dashboard() {
     ]
   }, [communityMatches, userMatches])
 
-  function scrollToOnboarding() {
-    onboardingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
-  }
-
   async function handleScheduleChat(userId: string) {
     try {
       const message = await postScheduleChat(userId)
@@ -113,13 +113,9 @@ export function Dashboard() {
     }
   }
 
-  function handleProfileSaved(updatedProfile: UserProfile) {
-    setProfile(updatedProfile)
-  }
-
   return (
     <div className="space-y-14">
-      <Hero onScrollToOnboarding={scrollToOnboarding} />
+      <Hero onPrimaryAction={() => router.push("/profile")} />
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {summaryMetrics.map((metric) => (
@@ -139,8 +135,60 @@ export function Dashboard() {
         ))}
       </section>
 
-      <section ref={onboardingRef}>
-        <ProfileForm onSaved={handleProfileSaved} />
+      <section className="grid gap-5 lg:grid-cols-[minmax(0,_1.15fr)_minmax(0,_0.85fr)]">
+        <Card className="border-border/70 bg-card/80 backdrop-blur">
+          <CardContent className="space-y-5 p-6">
+            <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-primary">
+              <Sparkles className="h-4 w-4" /> Next best actions
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-semibold text-foreground">Keep the momentum going</h3>
+              <p className="text-sm text-muted-foreground">
+                Line up your next conversation and explore a community to stay connected after onboarding week.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button className="flex-1" onClick={() => router.push("/matches")}>
+                Open matches
+              </Button>
+              <Button variant="outline" className="flex-1" onClick={() => router.push("/communities")}>
+                Explore communities
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-border/70 bg-card/80 backdrop-blur">
+          <CardContent className="space-y-5 p-6">
+            <Badge variant="secondary" className="rounded-full bg-muted/60 text-xs uppercase tracking-widest">
+              Profile snapshot
+            </Badge>
+            <div className="space-y-2">
+              <h3 className="text-xl font-semibold text-foreground">
+                {profile?.fullName ?? "Complete your profile details"}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {[profile?.location, profile?.org, profile?.workspace].filter(Boolean).join(" · ") ||
+                  "Add your location and workspace to unlock hyper-relevant matches."}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {profile?.interests?.length ? (
+                profile.interests.map((interest) => (
+                  <Badge key={interest.id} variant="secondary" className="rounded-full px-3 py-1">
+                    {interest.name}
+                  </Badge>
+                ))
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Add interests during onboarding to unlock curated introductions.
+                </p>
+              )}
+            </div>
+            <Button variant="outline" onClick={() => router.push("/profile")}>
+              Update profile
+            </Button>
+          </CardContent>
+        </Card>
       </section>
 
       <section className="space-y-6">
@@ -152,8 +200,21 @@ export function Dashboard() {
             </p>
           </div>
           <div className="flex flex-col gap-3 md:flex-row">
-            <Button variant="outline" className="w-full md:w-auto" onClick={() => scrollToOnboarding()}>
-              <LogIn className="mr-2 h-4 w-4" /> Refresh matches
+            <Button
+              variant="outline"
+              className="w-full md:w-auto"
+              onClick={() => fetchDashboardData()}
+              disabled={isRefreshing}
+            >
+              {isRefreshing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Refreshing
+                </>
+              ) : (
+                <>
+                  <RefreshCcw className="mr-2 h-4 w-4" /> Refresh data
+                </>
+              )}
             </Button>
             <Button asChild className="w-full md:w-auto" variant="secondary">
               <Link href="/matches">View all</Link>
@@ -209,15 +270,9 @@ export function Dashboard() {
               </div>
             </div>
             <Separator />
-            <div>
-              <p className="text-sm font-semibold text-muted-foreground">Profile snapshot</p>
-              <p className="mt-2 text-sm leading-6 text-foreground/80">
-                {profile?.bio ?? "Share a short bio to help teammates spark a conversation."}
-              </p>
-              <Button asChild size="sm" variant="secondary" className="mt-4 w-full">
-                <Link href="/network">View full network</Link>
-              </Button>
-            </div>
+            <Button asChild size="sm" variant="secondary" className="w-full">
+              <Link href="/network">View full network</Link>
+            </Button>
           </CardContent>
         </Card>
       </section>

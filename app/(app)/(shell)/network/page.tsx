@@ -1,23 +1,37 @@
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import { NetworkPreview } from "@/components/dashboard/network-preview"
 import { PageHeader } from "@/components/layout/page-header"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { MOCK_USER_ID } from "@/lib/constants"
-import type { NetworkGraph } from "@/lib/types"
+import { fetchFromApi, isOnboardingCompleteFromCookies } from "@/lib/server-api"
+import { isProfileComplete } from "@/lib/profile"
+import type { NetworkGraph, UserProfile } from "@/lib/types"
 
-async function getNetwork(): Promise<NetworkGraph | null> {
+export const dynamic = "force-dynamic"
+
+async function getProfile(): Promise<UserProfile | null> {
   try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/api/network/${MOCK_USER_ID}`,
-      { cache: "no-store" }
-    )
-
+    const response = await fetchFromApi("/api/users/me/profile")
     if (!response.ok) {
       return null
     }
+    const json = await response.json()
+    return (json?.data as UserProfile) ?? null
+  } catch (error) {
+    console.error("Failed to load profile for network page", error)
+    return null
+  }
+}
 
+async function getNetwork(): Promise<NetworkGraph | null> {
+  try {
+    const response = await fetchFromApi(`/api/network/${MOCK_USER_ID}`)
+    if (!response.ok) {
+      return null
+    }
     const json = await response.json()
     return (json?.data as NetworkGraph) ?? null
   } catch (error) {
@@ -27,6 +41,12 @@ async function getNetwork(): Promise<NetworkGraph | null> {
 }
 
 export default async function NetworkPage() {
+  const profile = await getProfile()
+
+  if (!(await isOnboardingCompleteFromCookies()) || !profile || !isProfileComplete(profile)) {
+    redirect("/onboarding")
+  }
+
   const network = await getNetwork()
   const nodeCount = network?.nodes.length ?? 0
   const linkCount = network?.links.length ?? 0

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { mockProfile } from "@/lib/mock-data"
+import { findUserByIdentifier, getOrCreateUser, getUserProfile } from "@/lib/mock-store"
 
 export async function POST(request: Request) {
   const body = await request.json()
@@ -17,23 +17,16 @@ export async function POST(request: Request) {
     )
   }
 
-  if (username.toLowerCase() === mockProfile.username.toLowerCase()) {
-    return NextResponse.json({
-      status: "success",
-      data: {
-        userId: mockProfile.userId,
-        username: mockProfile.username,
-        profile: mockProfile,
-      },
-    })
-  }
+  const existing = findUserByIdentifier(username)
+
+  const user = existing ?? getOrCreateUser(username)
 
   return NextResponse.json({
     status: "success",
     data: {
-      userId: crypto.randomUUID(),
-      username,
-      profile: null,
+      userId: user.userId,
+      username: user.username,
+      profile: getUserProfile(user.userId),
     },
   })
 }
